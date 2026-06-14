@@ -58,15 +58,27 @@ FasalAI is built to bridge the gap between farmers and timely agricultural exper
 
 ## Setup
 
-If you are running the application locally, the usual setup is:
+The project is split into two apps: `backend` (Express API) and `frontend` (React + Vite).
 
-1. Clone the repository.
-2. Install dependencies for both frontend and backend.
-3. Configure environment variables for MongoDB, JWT, and Gemini API access.
-4. Start the backend server.
-5. Start the frontend development server.
+### Backend
 
-Example environment variables:
+```bash
+cd backend
+cp .env.example .env   # fill in MONGODB_URI, JWT_SECRET, GEMINI_API_KEY
+npm install
+npm run dev            # starts the API on http://localhost:5000
+```
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env   # set VITE_API_URL (defaults to http://localhost:5000/api)
+npm install
+npm run dev            # starts the app on http://localhost:5173
+```
+
+Example backend environment variables:
 
 ```env
 MONGODB_URI=your_mongodb_connection_string
@@ -77,7 +89,43 @@ PORT=5000
 
 ## Project Structure
 
-This repository contains the FasalAI project documentation for the TBI-GEU Summer Internship Program 2026.
+```
+FasalAI/
+├── backend/                 # Node.js + Express REST API
+│   └── src/
+│       ├── config/          # Database connection
+│       ├── models/          # Mongoose schemas (User, Detection)
+│       ├── middleware/       # Auth + error handling
+│       ├── controllers/     # Auth, detection, chat logic
+│       ├── routes/          # API route definitions
+│       ├── services/        # Disease inference + Gemini advisory
+│       └── server.js        # Entry point
+└── frontend/                # React + Vite + Tailwind CSS
+    └── src/
+        ├── api/             # Axios client
+        ├── context/         # Auth context
+        ├── components/      # Reusable UI
+        └── pages/           # Login, Dashboard, Detect, Chat, History
+```
+
+### API Overview
+
+| Method | Endpoint                  | Description                       |
+| ------ | ------------------------- | --------------------------------- |
+| POST   | `/api/auth/register`      | Create an account                 |
+| POST   | `/api/auth/login`         | Sign in and receive a JWT         |
+| GET    | `/api/auth/me`            | Get the current user              |
+| POST   | `/api/detections/detect`  | Upload an image, get a diagnosis  |
+| GET    | `/api/detections/history` | List past detections              |
+| GET    | `/api/detections/stats`   | Dashboard summary stats           |
+| POST   | `/api/chat`               | Ask the Gemini-powered advisor    |
+
+> Note: The disease detection service uses a lightweight, deterministic inference
+> stub so the app runs without a bundled model. It is structured so the real
+> TensorFlow/Keras CNN can be plugged into `backend/src/services/diseaseService.js`
+> without changing the rest of the application.
+
+This repository is part of the TBI-GEU Summer Internship Program 2026.
 
 ## Deployment
 
