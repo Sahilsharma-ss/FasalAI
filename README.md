@@ -120,10 +120,9 @@ FasalAI/
 | GET    | `/api/detections/stats`   | Dashboard summary stats           |
 | POST   | `/api/chat`               | Ask the Gemini-powered advisor    |
 
-> Note: The disease detection service uses a lightweight, deterministic inference
-> stub so the app runs without a bundled model. It is structured so the real
-> TensorFlow/Keras CNN can be plugged into `backend/src/services/diseaseService.js`
-> without changing the rest of the application.
+> Note: For now the detection service returns a stable result derived from the
+> uploaded image so the whole flow works end to end. The trained TensorFlow/Keras
+> model plugs into `backend/src/services/diseaseService.js` once it's ready.
 
 This repository is part of the TBI-GEU Summer Internship Program 2026.
 

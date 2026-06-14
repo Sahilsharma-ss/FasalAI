@@ -1,5 +1,4 @@
-// Disease classes the model can predict, with crop and advisory guidance.
-// Keeps the prediction layer and advisory layer in one clean source of truth.
+// The diseases we can detect plus the advice we show farmers for each one.
 
 export const diseaseClasses = [
   {
