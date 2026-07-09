@@ -1,34 +1,44 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 const SYSTEM_PROMPT =
   "You are FasalAI, a friendly agriculture advisor for small and marginal farmers. " +
   "Answer crop, soil, pest, and farming questions in clear, simple language. " +
   "Keep responses short, practical, and easy to act on.";
 
-let client = null;
-
-function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  if (!client) client = new GoogleGenerativeAI(apiKey);
-  return client;
-}
+const MODEL = "gemini-2.0-flash";
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 export async function askAdvisor(question) {
-  const genAI = getClient();
+  const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!genAI) {
+  if (!apiKey) {
     return (
       "The advisory assistant is not configured yet. " +
       "Set GEMINI_API_KEY in the backend environment to enable AI answers."
     );
   }
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    systemInstruction: SYSTEM_PROMPT,
+  const url = `${BASE_URL}/models/${MODEL}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: SYSTEM_PROMPT }],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: question }],
+        },
+      ],
+    }),
   });
 
-  const result = await model.generateContent(question);
-  return result.response.text();
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(JSON.stringify(errData));
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
 }

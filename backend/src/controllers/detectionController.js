@@ -41,3 +41,37 @@ export async function stats(req, res) {
       .slice(0, 5),
   });
 }
+
+export async function updateDetection(req, res) {
+  const { id } = req.params;
+  const { crop, disease, confidence, healthy, advisory } = req.body;
+
+  const detection = await Detection.findOne({ _id: id, user: req.userId });
+  if (!detection) {
+    return res.status(404).json({ message: "Detection not found" });
+  }
+
+  if (crop !== undefined) detection.crop = crop;
+  if (disease !== undefined) detection.disease = disease;
+  if (confidence !== undefined) detection.confidence = confidence;
+  if (healthy !== undefined) detection.healthy = healthy;
+  if (advisory !== undefined) detection.advisory = advisory;
+
+  await detection.save();
+  res.json({ detection });
+}
+
+export async function deleteDetection(req, res) {
+  const { id } = req.params;
+
+  const detection = await Detection.findOneAndDelete({
+    _id: id,
+    user: req.userId,
+  });
+
+  if (!detection) {
+    return res.status(404).json({ message: "Detection not found" });
+  }
+
+  res.json({ message: "Detection deleted successfully" });
+}

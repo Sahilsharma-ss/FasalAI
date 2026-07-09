@@ -4,6 +4,8 @@ import {
   detect,
   history,
   stats,
+  updateDetection,
+  deleteDetection,
 } from "../controllers/detectionController.js";
 import { authRequired } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -23,5 +25,8 @@ router.use(authRequired);
 router.post("/detect", upload.single("image"), asyncHandler(detect));
 router.get("/history", asyncHandler(history));
 router.get("/stats", asyncHandler(stats));
+router.put("/:id", asyncHandler(updateDetection));
+router.delete("/:id", asyncHandler(deleteDetection));
 
 export default router;
+

@@ -1,0 +1,429 @@
+================================================================================
+  FasalAI — API JSON Responses Documentation
+  Project: AI-Powered Crop Disease Detection & Farmer Advisory System
+  Intern: Sahil Sharma | ID: 26100973
+  Date: 2026-07-05
+================================================================================
+
+
+All API endpoints are prefixed with:  http://localhost:5000/api
+Protected routes require:  Authorization: Bearer <JWT_TOKEN>
+
+
+================================================================================
+1. HEALTH CHECK
+================================================================================
+
+  Endpoint:   GET /api/health
+  Auth:       Not required
+  Purpose:    Verify the API server is running
+
+  REQUEST:
+    GET http://localhost:5000/api/health
+
+  RESPONSE (200 OK):
+    {
+      "status": "ok",
+      "service": "FasalAI API"
+    }
+
+
+================================================================================
+2. REGISTER (Create User)
+================================================================================
+
+  Endpoint:   POST /api/auth/register
+  Auth:       Not required
+  Purpose:    Create a new user account and return a JWT token
+
+  REQUEST:
+    POST http://localhost:5000/api/auth/register
+    Content-Type: application/json
+
+    {
+      "name": "Test Farmer",
+      "email": "api_doc_test@fasalai.com",
+      "password": "Test@123456"
+    }
+
+  RESPONSE (201 Created):
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YTQ5NTQ3NTI2NGFiNTc2MTQ4ZGE4NWQiLCJpYXQiOjE3ODMxOTA2NDUsImV4cCI6MTc4Mzc5NTQ0NX0.h6HHDxSuwDNeKtf8vZ3X2iQ3ubIqMYDapYyldIGKsFQ",
+      "user": {
+        "id": "6a495475264ab576148da85d",
+        "name": "Test Farmer",
+        "email": "api_doc_test@fasalai.com"
+      }
+    }
+
+  ERROR RESPONSE (409 Conflict — duplicate email):
+    {
+      "message": "Email already registered"
+    }
+
+  ERROR RESPONSE (400 Bad Request — missing fields):
+    {
+      "message": "Name, email and password are required"
+    }
+
+
+================================================================================
+3. LOGIN
+================================================================================
+
+  Endpoint:   POST /api/auth/login
+  Auth:       Not required
+  Purpose:    Authenticate an existing user and return a JWT token
+
+  REQUEST:
+    POST http://localhost:5000/api/auth/login
+    Content-Type: application/json
+
+    {
+      "email": "api_doc_test@fasalai.com",
+      "password": "Test@123456"
+    }
+
+  RESPONSE (200 OK):
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YTQ5NTQ3NTI2NGFiNTc2MTQ4ZGE4NWQiLCJpYXQiOjE3ODMxOTA2OTYsImV4cCI6MTc4Mzc5NTQ5Nn0.2n80bxZiu97gQMhRbtAMa6z9IhoRmF0Bu0c-4K94PsY",
+      "user": {
+        "id": "6a495475264ab576148da85d",
+        "name": "Test Farmer",
+        "email": "api_doc_test@fasalai.com"
+      }
+    }
+
+  ERROR RESPONSE (401 Unauthorized):
+    {
+      "message": "Invalid credentials"
+    }
+
+  ERROR RESPONSE (400 Bad Request):
+    {
+      "message": "Email and password are required"
+    }
+
+
+================================================================================
+4. GET CURRENT USER
+================================================================================
+
+  Endpoint:   GET /api/auth/me
+  Auth:       Required (Bearer token)
+  Purpose:    Retrieve the currently authenticated user's profile
+
+  REQUEST:
+    GET http://localhost:5000/api/auth/me
+    Authorization: Bearer <JWT_TOKEN>
+
+  RESPONSE (200 OK):
+    {
+      "user": {
+        "id": "6a495475264ab576148da85d",
+        "name": "Test Farmer",
+        "email": "api_doc_test@fasalai.com"
+      }
+    }
+
+  ERROR RESPONSE (404 Not Found):
+    {
+      "message": "User not found"
+    }
+
+  ERROR RESPONSE (401 Unauthorized — missing/invalid token):
+    {
+      "message": "Authentication required"
+    }
+
+
+================================================================================
+5. CREATE DETECTION (Upload Image for Disease Diagnosis)
+================================================================================
+
+  Endpoint:   POST /api/detections/detect
+  Auth:       Required (Bearer token)
+  Purpose:    Upload a crop leaf image and receive AI disease prediction
+  Note:       Uses multipart/form-data with field name "image"
+
+  REQUEST:
+    POST http://localhost:5000/api/detections/detect
+    Authorization: Bearer <JWT_TOKEN>
+    Content-Type: multipart/form-data
+
+    Form field: image = <leaf_image.png>
+
+  RESPONSE (201 Created):
+    {
+      "detection": {
+        "user": "6a495475264ab576148da85d",
+        "crop": "Apple",
+        "disease": "Apple - Apple Scab",
+        "confidence": 0.88,
+        "healthy": false,
+        "advisory": {
+          "summary": "A fungal disease producing olive-green to black velvety leaf spots.",
+          "treatment": [
+            "Apply fungicide from bud break through early summer.",
+            "Rake and remove fallen leaves to reduce spores."
+          ],
+          "prevention": [
+            "Plant scab-resistant apple varieties.",
+            "Prune trees to improve light and air penetration."
+          ]
+        },
+        "_id": "6a4954cb264ab576148da861",
+        "createdAt": "2026-07-04T18:45:31.253Z",
+        "updatedAt": "2026-07-04T18:45:31.253Z",
+        "__v": 0
+      }
+    }
+
+  ERROR RESPONSE (400 Bad Request — no image):
+    {
+      "message": "An image file is required"
+    }
+
+
+================================================================================
+6. READ DETECTION HISTORY (List All Records)
+================================================================================
+
+  Endpoint:   GET /api/detections/history
+  Auth:       Required (Bearer token)
+  Purpose:    Retrieve all past detection records for the logged-in user
+              (sorted by newest first, limited to 50)
+
+  REQUEST:
+    GET http://localhost:5000/api/detections/history
+    Authorization: Bearer <JWT_TOKEN>
+
+  RESPONSE (200 OK):
+    {
+      "detections": [
+        {
+          "advisory": {
+            "summary": "A fungal disease producing olive-green to black velvety leaf spots.",
+            "treatment": [
+              "Apply fungicide from bud break through early summer.",
+              "Rake and remove fallen leaves to reduce spores."
+            ],
+            "prevention": [
+              "Plant scab-resistant apple varieties.",
+              "Prune trees to improve light and air penetration."
+            ]
+          },
+          "_id": "6a4954cb264ab576148da861",
+          "user": "6a495475264ab576148da85d",
+          "crop": "Apple",
+          "disease": "Apple - Apple Scab",
+          "confidence": 0.88,
+          "healthy": false,
+          "createdAt": "2026-07-04T18:45:31.253Z",
+          "updatedAt": "2026-07-04T18:45:31.253Z",
+          "__v": 0
+        }
+      ]
+    }
+
+  RESPONSE (200 OK — no records):
+    {
+      "detections": []
+    }
+
+
+================================================================================
+7. READ DETECTION STATS (Dashboard Summary)
+================================================================================
+
+  Endpoint:   GET /api/detections/stats
+  Auth:       Required (Bearer token)
+  Purpose:    Retrieve summary statistics and the 5 most recent detections
+
+  REQUEST:
+    GET http://localhost:5000/api/detections/stats
+    Authorization: Bearer <JWT_TOKEN>
+
+  RESPONSE (200 OK):
+    {
+      "total": 1,
+      "healthy": 0,
+      "diseased": 1,
+      "recent": [
+        {
+          "advisory": {
+            "summary": "A fungal disease producing olive-green to black velvety leaf spots.",
+            "treatment": [
+              "Apply fungicide from bud break through early summer.",
+              "Rake and remove fallen leaves to reduce spores."
+            ],
+            "prevention": [
+              "Plant scab-resistant apple varieties.",
+              "Prune trees to improve light and air penetration."
+            ]
+          },
+          "_id": "6a4954cb264ab576148da861",
+          "user": "6a495475264ab576148da85d",
+          "crop": "Apple",
+          "disease": "Apple - Apple Scab",
+          "confidence": 0.88,
+          "healthy": false,
+          "createdAt": "2026-07-04T18:45:31.253Z",
+          "updatedAt": "2026-07-04T18:45:31.253Z",
+          "__v": 0
+        }
+      ]
+    }
+
+
+================================================================================
+8. UPDATE DETECTION (Modify an Existing Record)
+================================================================================
+
+  Endpoint:   PUT /api/detections/:id
+  Auth:       Required (Bearer token)
+  Purpose:    Update fields (crop, disease, confidence, healthy, advisory)
+              of an existing detection. Only the record owner can update.
+
+  REQUEST:
+    PUT http://localhost:5000/api/detections/6a4954cb264ab576148da861
+    Authorization: Bearer <JWT_TOKEN>
+    Content-Type: application/json
+
+    {
+      "crop": "Tomato",
+      "disease": "Tomato - Early Blight"
+    }
+
+  RESPONSE (200 OK):
+    {
+      "detection": {
+        "advisory": {
+          "summary": "A fungal disease producing olive-green to black velvety leaf spots.",
+          "treatment": [
+            "Apply fungicide from bud break through early summer.",
+            "Rake and remove fallen leaves to reduce spores."
+          ],
+          "prevention": [
+            "Plant scab-resistant apple varieties.",
+            "Prune trees to improve light and air penetration."
+          ]
+        },
+        "_id": "6a4954cb264ab576148da861",
+        "user": "6a495475264ab576148da85d",
+        "crop": "Tomato",
+        "disease": "Tomato - Early Blight",
+        "confidence": 0.88,
+        "healthy": false,
+        "createdAt": "2026-07-04T18:45:31.253Z",
+        "updatedAt": "2026-07-04T18:46:07.066Z",
+        "__v": 0
+      }
+    }
+
+  ERROR RESPONSE (404 Not Found):
+    {
+      "message": "Detection not found"
+    }
+
+
+================================================================================
+9. DELETE DETECTION (Remove a Record)
+================================================================================
+
+  Endpoint:   DELETE /api/detections/:id
+  Auth:       Required (Bearer token)
+  Purpose:    Permanently delete a detection record.
+              Only the record owner can delete.
+
+  REQUEST:
+    DELETE http://localhost:5000/api/detections/6a4954cb264ab576148da861
+    Authorization: Bearer <JWT_TOKEN>
+
+  RESPONSE (200 OK):
+    {
+      "message": "Detection deleted successfully"
+    }
+
+  ERROR RESPONSE (404 Not Found):
+    {
+      "message": "Detection not found"
+    }
+
+
+================================================================================
+10. AI CHAT (Ask the Gemini-Powered Advisor)
+================================================================================
+
+  Endpoint:   POST /api/chat
+  Auth:       Required (Bearer token)
+  Purpose:    Send a farming/agriculture question to the Gemini AI advisor
+
+  REQUEST:
+    POST http://localhost:5000/api/chat
+    Authorization: Bearer <JWT_TOKEN>
+    Content-Type: application/json
+
+    {
+      "message": "What is the best fertilizer for tomato plants?"
+    }
+
+  RESPONSE (200 OK):
+    {
+      "answer": "For tomato plants, a balanced fertilizer with NPK ratio of 10-10-10 is recommended during early growth. Once flowering begins, switch to a phosphorus-rich formula like 5-10-10 to support fruit development..."
+    }
+
+  ERROR RESPONSE (400 Bad Request — empty message):
+    {
+      "message": "A question is required"
+    }
+
+  ERROR RESPONSE (429 Too Many Requests — AI rate limit):
+    {
+      "message": "The AI advisor is temporarily busy. Please wait a minute and try again."
+    }
+
+  ERROR RESPONSE (500 Internal Server Error):
+    {
+      "message": "Something went wrong with the AI advisor. Please try again later."
+    }
+
+
+================================================================================
+  CRUD OPERATIONS SUMMARY
+================================================================================
+
+  Operation  | Endpoint                       | Method | Status
+  -----------|--------------------------------|--------|--------
+  CREATE     | /api/auth/register             | POST   |  201
+  CREATE     | /api/detections/detect          | POST   |  201
+  READ       | /api/auth/me                   | GET    |  200
+  READ       | /api/detections/history         | GET    |  200
+  READ       | /api/detections/stats           | GET    |  200
+  UPDATE     | /api/detections/:id             | PUT    |  200
+  DELETE     | /api/detections/:id             | DELETE |  200
+
+
+================================================================================
+  DATABASE MODELS (MongoDB / Mongoose)
+================================================================================
+
+  User Schema:
+    - name       : String (required, trimmed)
+    - email      : String (required, unique, lowercase, trimmed)
+    - password   : String (required, min 6 chars, hashed with bcrypt, hidden)
+    - timestamps : createdAt, updatedAt (auto-generated)
+
+  Detection Schema:
+    - user       : ObjectId → ref "User" (required, indexed)
+    - crop       : String (default "Unknown")
+    - disease    : String (required)
+    - confidence : Number (required)
+    - healthy    : Boolean (default false)
+    - advisory   : { summary: String, treatment: [String], prevention: [String] }
+    - timestamps : createdAt, updatedAt (auto-generated)
+
+
+================================================================================
+  END OF DOCUMENT
+================================================================================
