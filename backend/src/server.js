@@ -8,7 +8,7 @@ dotenv.config({
   path: path.join(__dirname, "../.env"),
 });
 console.log("Mongo connected:", !!process.env.MONGODB_URI);
-console.log("Gemini key loaded:", !!process.env.GEMINI_API_KEY);
+console.log("OpenRouter key loaded:", !!process.env.OPENROUTER_API_KEY);
 import { createApp } from "./app.js";
 import { connectDB } from "./config/db.js";
 

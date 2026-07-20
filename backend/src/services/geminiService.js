@@ -1,10 +1,10 @@
-// ── Gemini AI Service ──────────────────────────────────────────────────
-// Centralised helper that talks to the Google Gemini REST API.
+// ── OpenRouter AI Service ──────────────────────────────────────────────
+// Centralised helper that talks to the OpenRouter API (OpenAI-compatible).
 // Every public function constructs a task-specific prompt, calls the
 // model, and returns the parsed result.
 
-const MODEL = "gemini-2.0-flash";
-const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-2.0-flash-001"; // OpenRouter model ID
 const TIMEOUT_MS = 30_000; // 30-second hard timeout
 
 // ── System prompts ─────────────────────────────────────────────────────
@@ -37,22 +37,24 @@ const SUMMARISER_SYSTEM_PROMPT =
   '"importantNumbers": ["any dates, dosages, or quantities mentioned"], ' +
   '"simplifiedTerms": [{ "term": "technical word", "meaning": "simple explanation" }] }';
 
-// ── Core Gemini caller ─────────────────────────────────────────────────
+// ── Core OpenRouter caller ─────────────────────────────────────────────
 
-async function callGemini(systemPrompt, userMessage, retries = 1) {
-  const apiKey = process.env.GEMINI_API_KEY;
+async function callAI(systemPrompt, userMessage, retries = 1) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     throw Object.assign(
-      new Error("GEMINI_API_KEY is not configured in the server environment."),
+      new Error("OPENROUTER_API_KEY is not configured in the server environment."),
       { status: 503 }
     );
   }
 
-  const url = `${BASE_URL}/models/${MODEL}:generateContent?key=${apiKey}`;
   const body = JSON.stringify({
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: [{ role: "user", parts: [{ text: userMessage }] }],
+    model: MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage },
+    ],
   });
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -60,9 +62,14 @@ async function callGemini(systemPrompt, userMessage, retries = 1) {
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch(BASE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "http://localhost:5000",
+          "X-Title": "FasalAI",
+        },
         body,
         signal: controller.signal,
       });
@@ -78,11 +85,12 @@ async function callGemini(systemPrompt, userMessage, retries = 1) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        const msg = errData?.error?.message || `Gemini API error (${response.status})`;
+        const msg =
+          errData?.error?.message || `OpenRouter API error (${response.status})`;
 
         // Retry on 5xx errors
         if (response.status >= 500 && attempt < retries) {
-          console.warn(`Gemini 5xx error, retrying (attempt ${attempt + 1})...`);
+          console.warn(`OpenRouter 5xx error, retrying (attempt ${attempt + 1})...`);
           await new Promise((r) => setTimeout(r, 1000));
           continue;
         }
@@ -91,7 +99,9 @@ async function callGemini(systemPrompt, userMessage, retries = 1) {
       }
 
       const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
+      return (
+        data.choices?.[0]?.message?.content || "No response from AI."
+      );
     } catch (err) {
       clearTimeout(timer);
 
@@ -104,7 +114,9 @@ async function callGemini(systemPrompt, userMessage, retries = 1) {
 
       // Retry on network errors
       if (!err.status && attempt < retries) {
-        console.warn(`Network error calling Gemini, retrying (attempt ${attempt + 1})...`);
+        console.warn(
+          `Network error calling OpenRouter, retrying (attempt ${attempt + 1})...`
+        );
         await new Promise((r) => setTimeout(r, 1000));
         continue;
       }
@@ -120,7 +132,7 @@ async function callGemini(systemPrompt, userMessage, retries = 1) {
  * General farming Q&A advisor (used by /api/chat).
  */
 export async function askAdvisor(question) {
-  return callGemini(ADVISOR_SYSTEM_PROMPT, question);
+  return callAI(ADVISOR_SYSTEM_PROMPT, question);
 }
 
 /**
@@ -138,7 +150,7 @@ export async function analyzeDiseaseWithAI({ crop, disease, confidence }) {
     `Include both chemical and organic treatment options. ` +
     `Respond ONLY with the JSON object, no markdown fences.`;
 
-  const raw = await callGemini(DISEASE_ANALYSIS_SYSTEM_PROMPT, prompt);
+  const raw = await callAI(DISEASE_ANALYSIS_SYSTEM_PROMPT, prompt);
 
   // Strip markdown code fences if the model wraps them
   const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
@@ -150,12 +162,15 @@ export async function analyzeDiseaseWithAI({ crop, disease, confidence }) {
     return {
       diseaseExplanation: raw,
       severity: "Unknown",
-      treatmentSteps: ["Please consult a local agricultural officer for specific guidance."],
+      treatmentSteps: [
+        "Please consult a local agricultural officer for specific guidance.",
+      ],
       organicAlternatives: [],
       preventionTips: [],
       whenToConsultExpert: "If symptoms persist or spread rapidly.",
       estimatedRecoveryDays: "Varies",
-      additionalNotes: "AI response could not be fully structured. Raw response provided above.",
+      additionalNotes:
+        "AI response could not be fully structured. Raw response provided above.",
     };
   }
 }
@@ -171,7 +186,7 @@ export async function summariseForFarmer(text) {
     `Respond ONLY with the JSON object, no markdown fences.\n\n` +
     `--- TEXT START ---\n${text}\n--- TEXT END ---`;
 
-  const raw = await callGemini(SUMMARISER_SYSTEM_PROMPT, prompt);
+  const raw = await callAI(SUMMARISER_SYSTEM_PROMPT, prompt);
 
   const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
 
