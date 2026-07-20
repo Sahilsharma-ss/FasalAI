@@ -1,5 +1,158 @@
 import { useState, useRef, useEffect } from "react";
 import api from "../api/client.js";
+import Toast from "../components/Toast.jsx";
+
+/**
+ * Simple markdown-to-JSX renderer for AI chat messages.
+ * Handles: **bold**, *italic*, `code`, bullet lists, numbered lists, and line breaks.
+ */
+function renderMarkdown(text) {
+  if (!text) return null;
+
+  const lines = text.split("\n");
+  const elements = [];
+  let listItems = [];
+  let listType = null; // "ul" or "ol"
+
+  function flushList() {
+    if (listItems.length === 0) return;
+    if (listType === "ol") {
+      elements.push(
+        <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1 my-2 text-sm">
+          {listItems.map((item, i) => (
+            <li key={i} className="leading-relaxed">{formatInline(item)}</li>
+          ))}
+        </ol>
+      );
+    } else {
+      elements.push(
+        <ul key={`ul-${elements.length}`} className="list-disc list-inside space-y-1 my-2 text-sm">
+          {listItems.map((item, i) => (
+            <li key={i} className="leading-relaxed">{formatInline(item)}</li>
+          ))}
+        </ul>
+      );
+    }
+    listItems = [];
+    listType = null;
+  }
+
+  function formatInline(str) {
+    // Process **bold**, *italic*, `code`
+    const parts = [];
+    let remaining = str;
+    let key = 0;
+
+    while (remaining.length > 0) {
+      // Bold: **text**
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      // Code: `text`
+      const codeMatch = remaining.match(/`(.+?)`/);
+      // Italic: *text* (but not **)
+      const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/);
+
+      // Find the earliest match
+      let earliest = null;
+      let earliestIndex = Infinity;
+
+      if (boldMatch && remaining.indexOf(boldMatch[0]) < earliestIndex) {
+        earliest = { type: "bold", match: boldMatch };
+        earliestIndex = remaining.indexOf(boldMatch[0]);
+      }
+      if (codeMatch && remaining.indexOf(codeMatch[0]) < earliestIndex) {
+        earliest = { type: "code", match: codeMatch };
+        earliestIndex = remaining.indexOf(codeMatch[0]);
+      }
+      if (italicMatch && remaining.indexOf(italicMatch[0]) < earliestIndex) {
+        earliest = { type: "italic", match: italicMatch };
+        earliestIndex = remaining.indexOf(italicMatch[0]);
+      }
+
+      if (!earliest) {
+        parts.push(<span key={key++}>{remaining}</span>);
+        break;
+      }
+
+      // Add text before match
+      if (earliestIndex > 0) {
+        parts.push(<span key={key++}>{remaining.slice(0, earliestIndex)}</span>);
+      }
+
+      // Add formatted match
+      if (earliest.type === "bold") {
+        parts.push(<strong key={key++} className="font-bold">{earliest.match[1]}</strong>);
+      } else if (earliest.type === "code") {
+        parts.push(
+          <code key={key++} className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-xs font-mono">
+            {earliest.match[1]}
+          </code>
+        );
+      } else if (earliest.type === "italic") {
+        parts.push(<em key={key++}>{earliest.match[1]}</em>);
+      }
+
+      remaining = remaining.slice(earliestIndex + earliest.match[0].length);
+    }
+
+    return parts;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Unordered list: - or * or •
+    const ulMatch = line.match(/^\s*[-*•]\s+(.+)/);
+    if (ulMatch) {
+      if (listType !== "ul") flushList();
+      listType = "ul";
+      listItems.push(ulMatch[1]);
+      continue;
+    }
+
+    // Ordered list: 1. or 1)
+    const olMatch = line.match(/^\s*\d+[.)]\s+(.+)/);
+    if (olMatch) {
+      if (listType !== "ol") flushList();
+      listType = "ol";
+      listItems.push(olMatch[1]);
+      continue;
+    }
+
+    flushList();
+
+    // Headers: ### or ## or #
+    if (line.startsWith("### ")) {
+      elements.push(
+        <h4 key={`h-${i}`} className="font-bold text-sm mt-3 mb-1 text-slate-800 dark:text-slate-200">
+          {formatInline(line.slice(4))}
+        </h4>
+      );
+    } else if (line.startsWith("## ")) {
+      elements.push(
+        <h3 key={`h-${i}`} className="font-bold text-base mt-3 mb-1 text-slate-800 dark:text-slate-200">
+          {formatInline(line.slice(3))}
+        </h3>
+      );
+    } else if (line.startsWith("# ")) {
+      elements.push(
+        <h2 key={`h-${i}`} className="font-extrabold text-lg mt-3 mb-1 text-slate-800 dark:text-slate-200">
+          {formatInline(line.slice(2))}
+        </h2>
+      );
+    } else if (line.trim() === "") {
+      elements.push(<div key={`br-${i}`} className="h-2" />);
+    } else {
+      elements.push(
+        <p key={`p-${i}`} className="text-sm leading-relaxed">
+          {formatInline(line)}
+        </p>
+      );
+    }
+  }
+
+  flushList();
+  return elements;
+}
 
 export default function Chat() {
   const [messages, setMessages] = useState([
@@ -10,6 +163,7 @@ export default function Chat() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
   const messagesEndRef = useRef(null);
 
   function scrollToBottom() {
@@ -36,11 +190,15 @@ export default function Chat() {
         { role: "assistant", text: res.data.answer },
       ]);
     } catch (err) {
+      const errorMsg =
+        err.response?.data?.message ||
+        "Sorry, I couldn't reach the server. Please verify your connection.";
+      setToast({ message: errorMsg, type: "error" });
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: err.response?.data?.message || "Sorry, I couldn't reach the server. Please verify your connection.",
+          text: "⚠️ " + errorMsg,
         },
       ]);
     } finally {
@@ -50,6 +208,14 @@ export default function Chat() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-6 w-full flex-1 flex flex-col h-[calc(100vh-6rem)] animate-fade-in">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Mini header */}
       <div className="flex items-center justify-between pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
         <div>
@@ -74,8 +240,8 @@ export default function Chat() {
               {/* Avatar indicator */}
               {!isUser ? (
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-leaf-600 text-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <path d="M12 2.25a.75.75 0 0 0-1.13.225L5.27 10.5H3a.75.75 0 0 0 0 1.5h2.27l5.6 8.025a.75.75 0 0 0 1.23-.9l-5.02-7.125H18.73l-5.02 7.125a.75.75 0 1 0 1.23.9l5.6-8.025A.75.75 0 0 0 21 12H18.73l-5.6-8.025a.75.75 0 0 0-1.13-.225Z" />
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
                   </svg>
                 </div>
               ) : (
@@ -86,13 +252,17 @@ export default function Chat() {
 
               {/* Message text bubble */}
               <div
-                className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
+                className={`max-w-[75%] px-4 py-3 rounded-2xl shadow-sm ${
                   isUser
                     ? "bg-gradient-premium rounded-tr-none"
                     : "bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 text-slate-800 dark:text-slate-100 rounded-tl-none"
                 }`}
               >
-                {msg.text}
+                {isUser ? (
+                  <span className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</span>
+                ) : (
+                  <div className="space-y-0.5">{renderMarkdown(msg.text)}</div>
+                )}
               </div>
             </div>
           );
@@ -101,14 +271,14 @@ export default function Chat() {
         {loading && (
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-leaf-600 text-white flex items-center justify-center shadow-md flex-shrink-0 animate-pulse">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                <path d="M12 2.25a.75.75 0 0 0-1.13.225L5.27 10.5H3a.75.75 0 0 0 0 1.5h2.27l5.6 8.025a.75.75 0 0 0 1.23-.9l-5.02-7.125H18.73l-5.02 7.125a.75.75 0 1 0 1.23.9l5.6-8.025A.75.75 0 0 0 21 12H18.73l-5.6-8.025a.75.75 0 0 0-1.13-.225Z" />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
               </svg>
             </div>
             <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl rounded-tl-none px-5 py-4 flex items-center gap-1.5 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 dark:bg-emerald-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 dark:bg-emerald-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 dark:bg-emerald-500 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}

@@ -11,6 +11,12 @@ export default function DetectionCard({ detection, onUpdate, onDelete }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
+  // ───── AI Treatment Plan state ─────
+  const [aiPlan, setAiPlan] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiExpanded, setAiExpanded] = useState(false);
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -38,6 +44,43 @@ export default function DetectionCard({ detection, onUpdate, onDelete }) {
       console.error("Delete failed:", err);
       setDeleting(false);
     }
+  }
+
+  async function handleGetAIPlan() {
+    if (aiPlan) {
+      setAiExpanded(!aiExpanded);
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError("");
+
+    try {
+      const res = await api.post("/ai/analyze-disease", {
+        crop,
+        disease,
+        confidence,
+      });
+      setAiPlan(res.data.analysis);
+      setAiExpanded(true);
+    } catch (err) {
+      setAiError(
+        err.response?.data?.message ||
+          "Failed to get AI treatment plan. Please try again."
+      );
+      setTimeout(() => setAiError(""), 5000);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  // Severity badge colour mapping
+  function severityColor(severity) {
+    const s = (severity || "").toLowerCase();
+    if (s === "critical") return "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-400";
+    if (s === "high") return "bg-orange-500/10 border-orange-500/20 text-orange-700 dark:text-orange-400";
+    if (s === "medium") return "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400";
+    return "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400";
   }
 
   return (
@@ -142,7 +185,7 @@ export default function DetectionCard({ detection, onUpdate, onDelete }) {
 
             {advisory?.summary && (
               <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                "{advisory.summary}"
+                &quot;{advisory.summary}&quot;
               </p>
             )}
 
@@ -181,6 +224,148 @@ export default function DetectionCard({ detection, onUpdate, onDelete }) {
                 </div>
               )}
             </div>
+
+            {/* ───── AI Treatment Plan Button ───── */}
+            {!healthy && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleGetAIPlan}
+                  disabled={aiLoading}
+                  className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-600/25 transition-all duration-300 disabled:opacity-60 disabled:shadow-none"
+                >
+                  {aiLoading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Generating AI Plan...</span>
+                    </>
+                  ) : aiPlan ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d={aiExpanded ? "m4.5 15.75 7.5-7.5 7.5 7.5" : "m19.5 8.25-7.5 7.5-7.5-7.5"} />
+                      </svg>
+                      <span>{aiExpanded ? "Hide" : "Show"} AI Treatment Plan</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                      </svg>
+                      <span>Get AI Treatment Plan</span>
+                    </>
+                  )}
+                </button>
+
+                {/* AI Error */}
+                {aiError && (
+                  <div className="mt-2 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs rounded-xl flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 flex-shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                    </svg>
+                    <span>{aiError}</span>
+                  </div>
+                )}
+
+                {/* AI Treatment Plan expanded view */}
+                {aiPlan && aiExpanded && (
+                  <div className="mt-4 space-y-4 p-5 rounded-2xl bg-gradient-to-br from-violet-500/5 to-indigo-500/5 dark:from-violet-500/10 dark:to-indigo-500/10 border border-violet-500/15 dark:border-violet-500/20 animate-fade-in">
+                    <div className="flex items-center gap-2 pb-2 border-b border-violet-500/10 dark:border-violet-500/15">
+                      <span className="text-xxs uppercase tracking-wider font-extrabold text-violet-500 dark:text-violet-400">
+                        AI-Generated Treatment Plan
+                      </span>
+                      {aiPlan.severity && (
+                        <span className={`text-xxs font-bold px-2 py-0.5 rounded-full border ${severityColor(aiPlan.severity)}`}>
+                          {aiPlan.severity} Severity
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Disease explanation */}
+                    {aiPlan.diseaseExplanation && (
+                      <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                        {aiPlan.diseaseExplanation}
+                      </p>
+                    )}
+
+                    {/* Treatment steps */}
+                    {aiPlan.treatmentSteps?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xxs font-bold text-rose-500 dark:text-rose-400 uppercase tracking-widest">
+                          Treatment Steps
+                        </p>
+                        <ol className="space-y-1.5">
+                          {aiPlan.treatmentSteps.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                              <span className="w-5 h-5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xxs font-extrabold flex-shrink-0 mt-0.5">
+                                {i + 1}
+                              </span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {/* Organic alternatives */}
+                    {aiPlan.organicAlternatives?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xxs font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-widest">
+                          🌿 Organic Alternatives
+                        </p>
+                        <ul className="space-y-1.5">
+                          {aiPlan.organicAlternatives.map((alt, i) => (
+                            <li key={i} className="text-xs text-slate-600 dark:text-slate-300 flex items-start gap-1.5 leading-relaxed">
+                              <span className="text-emerald-500 font-bold">•</span>
+                              <span>{alt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Prevention tips */}
+                    {aiPlan.preventionTips?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xxs font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">
+                          Prevention Tips
+                        </p>
+                        <ul className="space-y-1.5">
+                          {aiPlan.preventionTips.map((tip, i) => (
+                            <li key={i} className="text-xs text-slate-600 dark:text-slate-300 flex items-start gap-1.5 leading-relaxed">
+                              <span className="text-blue-500 font-bold">•</span>
+                              <span>{tip}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Recovery + Expert */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      {aiPlan.estimatedRecoveryDays && (
+                        <div className="bg-white/60 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+                          <p className="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Recovery Time</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{aiPlan.estimatedRecoveryDays}</p>
+                        </div>
+                      )}
+                      {aiPlan.whenToConsultExpert && (
+                        <div className="bg-white/60 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+                          <p className="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">When to See Expert</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{aiPlan.whenToConsultExpert}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Additional notes */}
+                    {aiPlan.additionalNotes && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                        💡 {aiPlan.additionalNotes}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
 

@@ -15,14 +15,19 @@ The application is designed for rural users who may have limited digital literac
 - Crop Disease Detection: Upload a crop image and get an AI-generated disease prediction.
 - Confidence Score: View the model’s confidence for the predicted result.
 - Treatment Advisory: Receive disease-specific treatment steps, preventive measures, and remedy suggestions.
-- AI Chatbot: Ask open-ended crop and farming questions using the Gemini API.
+- **AI Disease Analyzer**: Get comprehensive, AI-generated treatment plans with organic alternatives, severity assessment, and recovery timelines powered by Google Gemini.
+- **AI Text Summariser**: Paste agricultural advisories or articles and get farmer-friendly summaries with key action items.
+- AI Chatbot: Ask open-ended crop and farming questions using the Gemini API, with markdown-formatted responses.
 - Crop Health History: Track previous diagnoses and monitor recurring disease patterns over time.
 - Farmer Dashboard: View recent detections, health trends, and quick access to advisory support.
 
 ## AI Capabilities
 
 - Disease Detection Model: A custom Convolutional Neural Network trained with TensorFlow and Keras on the PlantVillage dataset.
-- Advisory Assistant: Gemini API integration for contextual, easy-to-understand responses.
+- **AI Disease Analyzer**: Gemini-powered comprehensive treatment plan generator with severity rating, organic alternatives, and expert consultation guidance.
+- **AI Text Summariser**: Converts complex agricultural text into simple summaries with action items, important numbers, and simplified terminology.
+- Advisory Assistant: Gemini API integration for contextual, easy-to-understand chat responses with markdown formatting.
+- Prompt Engineering: Tested 3 prompt variations; documented in [PROMPTS.md](PROMPTS.md).
 
 ## Tech Stack
 
@@ -110,15 +115,17 @@ FasalAI/
 
 ### API Overview
 
-| Method | Endpoint                  | Description                       |
-| ------ | ------------------------- | --------------------------------- |
-| POST   | `/api/auth/register`      | Create an account                 |
-| POST   | `/api/auth/login`         | Sign in and receive a JWT         |
-| GET    | `/api/auth/me`            | Get the current user              |
-| POST   | `/api/detections/detect`  | Upload an image, get a diagnosis  |
-| GET    | `/api/detections/history` | List past detections              |
-| GET    | `/api/detections/stats`   | Dashboard summary stats           |
-| POST   | `/api/chat`               | Ask the Gemini-powered advisor    |
+| Method | Endpoint                    | Description                                    |
+| ------ | --------------------------- | ---------------------------------------------- |
+| POST   | `/api/auth/register`        | Create an account                              |
+| POST   | `/api/auth/login`           | Sign in and receive a JWT                      |
+| GET    | `/api/auth/me`              | Get the current user                           |
+| POST   | `/api/detections/detect`    | Upload an image, get a diagnosis               |
+| GET    | `/api/detections/history`   | List past detections                           |
+| GET    | `/api/detections/stats`     | Dashboard summary stats                        |
+| POST   | `/api/chat`                 | Ask the Gemini-powered advisor                 |
+| POST   | `/api/ai/analyze-disease`   | AI-generated comprehensive treatment plan      |
+| POST   | `/api/ai/summarise`         | AI text summariser for agricultural content    |
 
 > Note: For now the detection service returns a stable result derived from the
 > uploaded image so the whole flow works end to end. The trained TensorFlow/Keras

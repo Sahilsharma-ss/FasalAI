@@ -11,13 +11,15 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    password: { type: String, required: true, minlength: 6, select: false },
+    password: { type: String, minlength: 6, select: false },
+    githubId: { type: String, unique: true, sparse: true },
+    avatar: { type: String },
   },
   { timestamps: true }
 );
 
 userSchema.pre("save", async function hashPassword(next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

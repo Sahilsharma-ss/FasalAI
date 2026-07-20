@@ -4,10 +4,12 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
+import GitHubCallback from "./pages/GitHubCallback.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Detect from "./pages/Detect.jsx";
 import Chat from "./pages/Chat.jsx";
 import History from "./pages/History.jsx";
+import AISummarise from "./pages/AISummarise.jsx";
 
 export default function App() {
   return (
@@ -18,6 +20,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/auth/github/callback" element={<GitHubCallback />} />
           <Route
             path="/dashboard"
             element={
@@ -47,6 +50,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <History />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai/summarise"
+            element={
+              <ProtectedRoute>
+                <AISummarise />
               </ProtectedRoute>
             }
           />

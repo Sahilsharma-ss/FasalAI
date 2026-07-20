@@ -4,6 +4,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import detectionRoutes from "./routes/detectionRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import { notFound, errorHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -23,6 +24,7 @@ export function createApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/detections", detectionRoutes);
   app.use("/api/chat", chatRoutes);
+  app.use("/api/ai", aiRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

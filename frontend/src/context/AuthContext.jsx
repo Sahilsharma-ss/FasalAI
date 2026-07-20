@@ -36,13 +36,18 @@ export function AuthProvider({ children }) {
     saveSession(res.data);
   }
 
+  async function loginWithGithub(code) {
+    const res = await api.post("/auth/github", { code });
+    saveSession(res.data);
+  }
+
   function logout() {
     localStorage.removeItem("fasalai_token");
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGithub, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -51,3 +56,4 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
