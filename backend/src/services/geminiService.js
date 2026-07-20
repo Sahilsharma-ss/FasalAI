@@ -4,7 +4,7 @@
 // model, and returns the parsed result.
 
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "google/gemini-2.0-flash-001"; // OpenRouter model ID
+const MODEL = "google/gemini-2.5-flash"; // OpenRouter model ID
 const TIMEOUT_MS = 30_000; // 30-second hard timeout
 
 // ── System prompts ─────────────────────────────────────────────────────
@@ -51,6 +51,7 @@ async function callAI(systemPrompt, userMessage, retries = 1) {
 
   const body = JSON.stringify({
     model: MODEL,
+    max_tokens: 2048,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
