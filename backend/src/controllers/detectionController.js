@@ -6,7 +6,7 @@ export async function detect(req, res) {
     return res.status(400).json({ message: "An image file is required" });
   }
 
-  const prediction = predictDisease(req.file.buffer);
+  const prediction = await predictDisease(req.file.buffer, req.file.mimetype);
 
   const detection = await Detection.create({
     user: req.userId,
