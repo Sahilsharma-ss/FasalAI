@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
@@ -52,18 +53,24 @@ function ThemeToggle() {
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   function handleLogout() {
     logout();
+    setMobileOpen(false);
     navigate("/login");
+  }
+
+  function closeMobile() {
+    setMobileOpen(false);
   }
 
   const logoPath = user ? "/dashboard" : "/";
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border-b border-slate-200/50 dark:border-slate-800/50 transition-colors duration-300">
-      <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to={logoPath} className="flex items-center gap-2 group">
+      <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <Link to={logoPath} className="flex items-center gap-2 group flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-leaf-600 flex items-center justify-center text-white shadow-md shadow-leaf-500/20 group-hover:scale-105 transition-transform duration-300">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -88,6 +95,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2 sm:gap-6">
           {user ? (
             <>
+              {/* Desktop nav links */}
               <div className="hidden sm:flex items-center gap-1">
                 {links.map((link) => (
                   <NavLink
@@ -105,31 +113,31 @@ export default function Navbar() {
                   </NavLink>
                 ))}
               </div>
-              
-              {/* Mobile links */}
-              <div className="flex sm:hidden items-center gap-1">
-                {links.map((link) => (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    className={({ isActive }) =>
-                      `px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-leaf-50 text-leaf-700 dark:bg-leaf-950/40 dark:text-leaf-400"
-                          : "text-slate-500 hover:text-leaf-600 dark:text-slate-400 dark:hover:text-leaf-400"
-                      }`
-                    }
-                  >
-                    {link.label}
-                  </NavLink>
-                ))}
-              </div>
 
+              {/* Desktop logout */}
               <button
                 onClick={handleLogout}
-                className="text-sm font-medium text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200"
+                className="hidden sm:block text-sm font-medium text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200"
               >
                 Logout
+              </button>
+
+              {/* Mobile hamburger button */}
+              <button
+                type="button"
+                onClick={() => setMobileOpen((prev) => !prev)}
+                aria-label="Toggle menu"
+                className="sm:hidden p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                {mobileOpen ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  </svg>
+                )}
               </button>
             </>
           ) : (
@@ -153,6 +161,42 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
+
+      {/* ── Mobile Slide-Down Menu ── */}
+      {user && (
+        <div
+          className={`sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+            mobileOpen ? "max-h-80 border-t border-slate-200/50 dark:border-slate-800/50" : "max-h-0"
+          }`}
+        >
+          <div className="px-4 py-3 space-y-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg">
+            {links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={closeMobile}
+                className={({ isActive }) =>
+                  `block px-4 py-2.5 text-sm rounded-xl font-medium transition-all duration-200 ${
+                    isActive
+                      ? "bg-leaf-50 text-leaf-700 dark:bg-leaf-950/40 dark:text-leaf-400"
+                      : "text-slate-600 hover:text-leaf-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-leaf-400 dark:hover:bg-slate-800/40"
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+            <div className="pt-2 mt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2.5 text-sm rounded-xl font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
