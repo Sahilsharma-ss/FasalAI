@@ -84,7 +84,7 @@ async function callAI(systemPrompt, userMessage, retries = 1) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "http://localhost:5000",
+          "HTTP-Referer": process.env.APP_URL || "https://fasalai-api.onrender.com",
           "X-Title": "FasalAI",
         },
         body,
@@ -187,7 +187,7 @@ export async function analyzeImageWithAI(imageBuffer, mimeType = "image/jpeg") {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "http://localhost:5000",
+        "HTTP-Referer": process.env.APP_URL || "https://fasalai-api.onrender.com",
         "X-Title": "FasalAI",
       },
       body,
